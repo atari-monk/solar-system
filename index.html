@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Corrected Orbit</title>
+        <title>Frame-Rate Independent Orbit</title>
         <style>
             body {
                 margin: 0;
@@ -26,11 +26,11 @@
 
             // Constants
             const G = 0.1; // Gravitational constant
-            const dt = 0.05; // Time step
+            const traceInterval = 20; // Store trace every 20 frames (adjust as needed)
 
             // Sun properties (calculation will assume it's at (0, 0))
             const sun = {
-                x: 0, // Sun at (0, 0) for physics
+                x: 0,
                 y: 0,
                 vx: 0,
                 vy: 0,
@@ -41,9 +41,9 @@
 
             // Planet properties (initially positioned 200px away)
             const planet = {
-                x: 200, // Initial distance from Sun
+                x: 200,
                 y: 0,
-                vx: 0, // Initial velocity will be set to a proper perpendicular value
+                vx: 0,
                 vy: Math.sqrt((G * sun.mass) / 200), // Correct orbital velocity (perpendicular to radial vector)
                 mass: 10,
                 radius: 10,
@@ -52,7 +52,8 @@
 
             // Store the trace path
             const trace = [];
-            const maxTraceLength = 1000; // Maximum trace points
+            let frameCount = 0;
+            let lastTime = 0; // To store the time of the previous frame
 
             // Function to draw a body (sun or planet)
             function drawBody(body, offsetX, offsetY) {
@@ -73,14 +74,14 @@
             function drawVector(x, y, vx, vy, color, offsetX, offsetY) {
                 ctx.beginPath();
                 ctx.moveTo(x + offsetX, y + offsetY);
-                ctx.lineTo(x + offsetX + vx * 10, y + offsetY + vy * 10); // Scale up for visibility
+                ctx.lineTo(x + offsetX + vx * 10, y + offsetY + vy * 10);
                 ctx.strokeStyle = color;
                 ctx.lineWidth = 2;
                 ctx.stroke();
             }
 
             // Update physics: calculate gravitational force, update positions, velocities
-            function updatePhysics() {
+            function updatePhysics(dt) {
                 // Calculate distance between Sun and Planet
                 let dx = planet.x - sun.x;
                 let dy = planet.y - sun.y;
@@ -94,16 +95,19 @@
                 let ay = (force * (dy / r)) / planet.mass;
 
                 // Update planet velocity with acceleration
-                planet.vx -= ax * dt; // Note: Direction of force is opposite to the radial vector
+                planet.vx -= ax * dt; // Direction of force is opposite to the radial vector
                 planet.vy -= ay * dt;
 
                 // Update planet position based on velocity
                 planet.x += planet.vx * dt;
                 planet.y += planet.vy * dt;
 
-                // Store planet position for trace
-                trace.push({ x: planet.x, y: planet.y });
-                if (trace.length > maxTraceLength) trace.shift(); // Limit trace length
+                // Store planet position for trace at intervals (e.g., every 20 frames)
+                frameCount++;
+                if (frameCount % traceInterval === 0) {
+                    trace.push({ x: planet.x, y: planet.y });
+                }
+                if (trace.length > 1000) trace.shift(); // Keep trace length manageable
             }
 
             // Draw the trace of the planet's orbit
@@ -122,14 +126,22 @@
             }
 
             // Animate the simulation
-            function animate() {
+            function animate(timestamp) {
+                if (lastTime === 0) {
+                    lastTime = timestamp; // Initialize the lastTime on the first frame
+                }
+
+                // Calculate the time elapsed since the last frame (in seconds)
+                const dt = (timestamp - lastTime) / 1000; // Convert to seconds
+                lastTime = timestamp; // Update lastTime for the next frame
+
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
                 const offsetX = canvas.width / 2; // Center the Sun on the canvas
                 const offsetY = canvas.height / 2;
 
                 drawTrace(offsetX, offsetY); // Draw the trace
-                drawBody(sun, offsetX, offsetY); // Draw Sun (centered on canvas)
+                drawBody(sun, offsetX, offsetY); // Draw Sun
                 drawBody(planet, offsetX, offsetY); // Draw Planet
 
                 drawVector(
@@ -149,14 +161,14 @@
                     "green",
                     offsetX,
                     offsetY
-                ); // Acceleration vector (towards sun)
+                ); // Acceleration vector
 
-                updatePhysics(); // Update positions and velocities based on gravity
+                updatePhysics(dt); // Update positions and velocities based on gravity
 
-                requestAnimationFrame(animate); // Repeatedly call the animate function
+                requestAnimationFrame(animate); // Continue animating
             }
 
-            animate(); // Start the animation
+            animate(0); // Start the animation with an initial timestamp
         </script>
     </body>
 </html>
