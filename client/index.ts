@@ -1,3 +1,3 @@
-import {greet} from '../libs/solar_system/index'
+import {animate} from '../libs/solar_system/index'
 
-console.log(greet('World'))
+animate(0)
