@@ -5,7 +5,8 @@ canvas.width = window.innerWidth
 canvas.height = window.innerHeight
 
 const G = 0.1
-const traceInterval = 100
+const traceInterval = 1
+let timeScale = 1 // Default time scale to 1 (normal speed)
 
 class Body {
   x: number
@@ -64,6 +65,8 @@ class SolarSystem {
   }
 
   updatePhysics(dt: number) {
+    dt *= timeScale // Apply time scaling
+
     for (let i = 0; i < this.bodies.length; i++) {
       for (let j = 0; j < this.bodies.length; j++) {
         if (i !== j) {
@@ -78,7 +81,7 @@ class SolarSystem {
 
       if (this.frameCount % traceInterval === 0) {
         body.trace.push({x: body.x, y: body.y})
-        if (body.trace.length > 1000) body.trace.shift()
+        if (body.trace.length > 250) body.trace.shift()
       }
     })
 
@@ -127,4 +130,9 @@ export function animate(timestamp: number) {
 
   solarSystem.updatePhysics(1 / 60)
   requestAnimationFrame(animate)
+}
+
+// Function to adjust time scale dynamically
+export function setTimeScale(scale: number) {
+  timeScale = scale
 }
