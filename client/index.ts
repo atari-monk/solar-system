@@ -1,4 +1,3 @@
-import {animate, setTimeScale} from '../libs/solar_system/index'
+import {animate} from '../libs/solar_system'
 
-setTimeScale(200)
 animate(0)
