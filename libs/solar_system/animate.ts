@@ -8,6 +8,8 @@ export const ctx = canvas.getContext('2d')!
 canvas.width = window.innerWidth
 canvas.height = window.innerHeight
 
+let lastTimestamp = 0
+
 export function animate(timestamp: number) {
   ctx.clearRect(0, 0, canvas.width, canvas.height)
 
@@ -19,6 +21,11 @@ export function animate(timestamp: number) {
     body.draw(ctx, offsetX, offsetY)
   })
 
-  solarSystem.updatePhysics(1 / 60)
+  if (lastTimestamp) {
+    const deltaTime = (timestamp - lastTimestamp) / 1000
+    solarSystem.updatePhysics(deltaTime)
+  }
+
+  lastTimestamp = timestamp
   requestAnimationFrame(animate)
 }
