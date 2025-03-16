@@ -1,3 +1,5 @@
+import {CONFIG} from './defaultConfig'
+
 export class Body {
   x: number
   y: number
@@ -36,8 +38,8 @@ export class Body {
 
   drawTrace(ctx: CanvasRenderingContext2D, offsetX: number, offsetY: number) {
     ctx.beginPath()
-    ctx.strokeStyle = 'white'
-    ctx.lineWidth = 1
+    ctx.strokeStyle = CONFIG.BACKGROUND_COLOR
+    ctx.lineWidth = CONFIG.LINE_WIDTH
     for (let i = 0; i < this.trace.length - 1; i++) {
       ctx.moveTo(this.trace[i].x + offsetX, this.trace[i].y + offsetY)
       ctx.lineTo(this.trace[i + 1].x + offsetX, this.trace[i + 1].y + offsetY)

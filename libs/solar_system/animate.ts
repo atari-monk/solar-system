@@ -1,7 +1,8 @@
+import {CONFIG} from './defaultConfig'
 import {solarSystem} from './solar_system_factory'
 
 export const canvas = document.getElementById(
-  'solarCanvas'
+  CONFIG.CANVAS_ID
 ) as HTMLCanvasElement
 export const ctx = canvas.getContext('2d')!
 
