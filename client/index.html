@@ -3,11 +3,248 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Frame-Rate Independent Orbit</title>
-    <link rel="stylesheet" href="styles.css" />
+    <title>Orbiting Satellites for Any Body</title>
+    <style>
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: #000;
+      }
+      canvas {
+        display: block;
+      }
+    </style>
   </head>
   <body>
-    <canvas id="solarCanvas"></canvas>
-    <script type="module" src="./index.ts"></script>
+    <canvas id="canvas"></canvas>
+    <script>
+      // Setup canvas.
+      const canvas = document.getElementById('canvas')
+      const ctx = canvas.getContext('2d')
+      canvas.width = window.innerWidth
+      canvas.height = window.innerHeight
+
+      // Conversion: simulation uses AU and days.
+      // 1 AU = 150 pixels.
+      const AU_SCALE = 150
+      // Factor to scale the Moon's drawn orbit relative to Earth.
+      const MOON_DRAW_SCALE = 50
+      // Time scale factor: adjust to slow down or speed up simulation.
+      let timeScale = 0.2 // simulation runs at 10% of the base speed
+
+      // 2D vector class.
+      class Vector {
+        constructor(x, y) {
+          this.x = x
+          this.y = y
+        }
+      }
+
+      // Body class: positions in AU, velocities in AU/day, accelerations in AU/day².
+      class Body {
+        constructor(x, y, vx, vy, mass, radius, color) {
+          this.pos = new Vector(x, y)
+          this.vel = new Vector(vx, vy)
+          this.acc = new Vector(0, 0)
+          this.mass = mass // in solar masses
+          this.radius = radius // drawn radius in pixels
+          this.color = color
+        }
+        // Draw the body using simulation-to-canvas conversion.
+        draw() {
+          const x = canvas.width / 2 + this.pos.x * AU_SCALE
+          const y = canvas.height / 2 + this.pos.y * AU_SCALE
+          ctx.beginPath()
+          ctx.arc(x, y, this.radius, 0, Math.PI * 2)
+          ctx.fillStyle = this.color
+          ctx.fill()
+        }
+      }
+
+      // Gravitational constant in AU³/day² per solar mass.
+      const G = (4 * Math.PI * Math.PI) / (365.25 * 365.25) // ~0.0002959
+
+      // Create the main bodies.
+      const sun = new Body(0, 0, 0, 0, 1, 20, 'yellow')
+
+      // Mercury: 0.387 AU from Sun; circular speed ~0.02765 AU/day.
+      const mercury = new Body(0.387, 0, 0, 0.02765, 1.66e-7, 4, 'orange')
+
+      // Earth: 1 AU from Sun; circular speed ~0.017202 AU/day.
+      const earth = new Body(1, 0, 0, 0.017202, 3e-6, 8, 'blue')
+
+      // Moon: orbiting Earth at ~0.00257 AU; relative speed ~0.00059 AU/day.
+      const moon = new Body(1, 0.00257, -0.00059, 0.017202, 3.7e-8, 4, 'gray')
+
+      // Collection of all bodies (satellites will be added here too).
+      const bodies = [sun, mercury, earth, moon]
+
+      // Compute gravitational force between two bodies.
+      function computeForce(a, b) {
+        const dx = b.pos.x - a.pos.x
+        const dy = b.pos.y - a.pos.y
+        const distSq = dx * dx + dy * dy
+        const dist = Math.sqrt(distSq)
+        const softening = 0.001 // softening length in AU to avoid singularities
+        const forceMagnitude =
+          (G * a.mass * b.mass) / (distSq + softening * softening)
+        return {
+          x: (dx / dist) * forceMagnitude,
+          y: (dy / dist) * forceMagnitude,
+        }
+      }
+
+      // Compute net accelerations for all bodies.
+      function computeAccelerations() {
+        for (let body of bodies) {
+          let ax = 0,
+            ay = 0
+          for (let other of bodies) {
+            if (body === other) continue
+            const force = computeForce(body, other)
+            ax += force.x / body.mass
+            ay += force.y / body.mass
+          }
+          body.acc = new Vector(ax, ay)
+        }
+      }
+
+      const baseDt = 1 // base time step in days
+
+      // Update simulation using Velocity Verlet integration.
+      function update() {
+        const dt = baseDt * timeScale // effective time step
+        // Update positions.
+        for (let body of bodies) {
+          body.pos.x += body.vel.x * dt + 0.5 * body.acc.x * dt * dt
+          body.pos.y += body.vel.y * dt + 0.5 * body.acc.y * dt * dt
+        }
+        // Store old accelerations.
+        const oldAccs = bodies.map(body => new Vector(body.acc.x, body.acc.y))
+        // Recompute accelerations.
+        computeAccelerations()
+        // Update velocities using the average of old and new accelerations.
+        for (let i = 0; i < bodies.length; i++) {
+          bodies[i].vel.x += 0.5 * (oldAccs[i].x + bodies[i].acc.x) * dt
+          bodies[i].vel.y += 0.5 * (oldAccs[i].y + bodies[i].acc.y) * dt
+        }
+      }
+
+      // Render all bodies.
+      function render() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        // Draw Sun, Mercury, Earth.
+        sun.draw()
+        mercury.draw()
+        earth.draw()
+        // Draw Moon with its offset relative to Earth scaled for visibility.
+        const earthScreenX = canvas.width / 2 + earth.pos.x * AU_SCALE
+        const earthScreenY = canvas.height / 2 + earth.pos.y * AU_SCALE
+        const offsetX = (moon.pos.x - earth.pos.x) * AU_SCALE * MOON_DRAW_SCALE
+        const offsetY = (moon.pos.y - earth.pos.y) * AU_SCALE * MOON_DRAW_SCALE
+        const moonScreenX = earthScreenX + offsetX
+        const moonScreenY = earthScreenY + offsetY
+        ctx.beginPath()
+        ctx.arc(moonScreenX, moonScreenY, moon.radius, 0, Math.PI * 2)
+        ctx.fillStyle = moon.color
+        ctx.fill()
+        // Draw any satellites that were added.
+        // They use the default drawing method.
+        // (Skip drawing the main bodies again.)
+        for (let body of bodies) {
+          if ([sun, mercury, earth, moon].includes(body)) continue
+          body.draw()
+        }
+      }
+
+      function loop() {
+        update()
+        render()
+        requestAnimationFrame(loop)
+      }
+
+      // Initialize accelerations and start the simulation.
+      computeAccelerations()
+      loop()
+
+      // Helper: convert canvas coordinates (pixels) to simulation coordinates (AU).
+      function canvasToSim(x, y) {
+        return new Vector(
+          (x - canvas.width / 2) / AU_SCALE,
+          (y - canvas.height / 2) / AU_SCALE
+        )
+      }
+
+      // When the canvas is clicked, add a satellite orbiting the clicked body (if any) or Earth by default.
+      canvas.addEventListener('click', e => {
+        const clickSim = canvasToSim(e.clientX, e.clientY)
+        // Determine the orbit center: check if click is near any body.
+        let orbitCenter = earth // default
+        let minDistance = Infinity
+        // Threshold in pixels (e.g., 20 pixels).
+        const threshold = 20
+        for (let body of bodies) {
+          // Get body's screen coordinates.
+          const bodyScreenX = canvas.width / 2 + body.pos.x * AU_SCALE
+          const bodyScreenY = canvas.height / 2 + body.pos.y * AU_SCALE
+          const dx = e.clientX - bodyScreenX
+          const dy = e.clientY - bodyScreenY
+          const distPixels = Math.sqrt(dx * dx + dy * dy)
+          if (distPixels < threshold && distPixels < minDistance) {
+            minDistance = distPixels
+            orbitCenter = body
+          }
+        }
+        // Compute offset (in AU) from the orbit center to the click location.
+        const dx = clickSim.x - orbitCenter.pos.x
+        const dy = clickSim.y - orbitCenter.pos.y
+        const r = Math.sqrt(dx * dx + dy * dy)
+        // Avoid satellites too close to the orbit center.
+        if (r < 0.0005) return
+        // Compute the circular orbital speed: v = sqrt(G*M / r).
+        const vOrbit = Math.sqrt((G * orbitCenter.mass) / r)
+        // Compute perpendicular unit vector (-dy, dx) to the offset.
+        const perpX = -dy / r
+        const perpY = dx / r
+        // Satellite's velocity relative to orbit center.
+        const vxRel = perpX * vOrbit
+        const vyRel = perpY * vOrbit
+        // Absolute satellite velocity is the orbit center’s velocity plus the orbital component.
+        const vxSat = orbitCenter.vel.x + vxRel
+        const vySat = orbitCenter.vel.y + vyRel
+        // Create the satellite with a small mass and distinct color.
+        const satellite = new Body(
+          clickSim.x,
+          clickSim.y,
+          vxSat,
+          vySat,
+          1e-8,
+          3,
+          'lime'
+        )
+        bodies.push(satellite)
+        console.log(
+          'Added satellite orbiting',
+          orbitCenter.color,
+          'at',
+          clickSim,
+          'with velocity',
+          vxSat,
+          vySat
+        )
+      })
+
+      // Optional: right-click to cycle through time scales.
+      canvas.addEventListener('contextmenu', e => {
+        e.preventDefault()
+        if (timeScale === 0.1) timeScale = 0.5
+        else if (timeScale === 0.5) timeScale = 1
+        else if (timeScale === 1) timeScale = 0.05
+        else timeScale = 0.1
+        console.log('Time scale:', timeScale)
+      })
+    </script>
   </body>
 </html>
