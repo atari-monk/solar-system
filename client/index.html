@@ -221,7 +221,7 @@
       })
 
       function restartSimulation() {
-        simulationRunning = false // Ensure simulation is running after restart
+        simulationRunning = true // Ensure simulation is running after restart
         // Reset all bodies to their initial positions, velocities, and accelerations.
         bodies.length = 0 // Clear the bodies array
         bodies.push(...createBodies()) // Reinitialize bodies
