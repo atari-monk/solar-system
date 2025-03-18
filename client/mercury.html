@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sun-Earth-Moon-Mercury Simulation with Time Scaling</title>
+    <style>
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: #000;
+      }
+      canvas {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+    <script>
+      const canvas = document.getElementById('canvas')
+      const ctx = canvas.getContext('2d')
+      // Resize canvas to full window size.
+      canvas.width = window.innerWidth
+      canvas.height = window.innerHeight
+
+      // Conversion: simulation uses AU (astronomical units) and days.
+      // We'll convert AU to canvas pixels; here, 1 AU equals 150 pixels.
+      const AU_SCALE = 150
+      // Factor to scale the Moon's drawn orbit relative to Earth.
+      const MOON_DRAW_SCALE = 50
+      // Time scale factor: set to a value less than 1 to slow down time.
+      let timeScale = 0.2 // 0.1 means simulation runs at 10% of the base speed
+
+      // Define a simple 2D vector type.
+      class Vector {
+        constructor(x, y) {
+          this.x = x
+          this.y = y
+        }
+      }
+
+      // Body class: positions in AU, velocities in AU/day, accelerations in AU/day².
+      class Body {
+        constructor(x, y, vx, vy, mass, radius, color) {
+          this.pos = new Vector(x, y)
+          this.vel = new Vector(vx, vy)
+          this.acc = new Vector(0, 0)
+          this.mass = mass // in solar masses
+          this.radius = radius // drawn radius in pixels
+          this.color = color
+        }
+        // For bodies other than the Moon, convert simulation coordinates (in AU) to canvas coordinates.
+        draw() {
+          const x = canvas.width / 2 + this.pos.x * AU_SCALE
+          const y = canvas.height / 2 + this.pos.y * AU_SCALE
+          ctx.beginPath()
+          ctx.arc(x, y, this.radius, 0, Math.PI * 2)
+          ctx.fillStyle = this.color
+          ctx.fill()
+        }
+      }
+
+      // Gravitational constant in AU³/day² per solar mass.
+      const G = (4 * Math.PI * Math.PI) / (365.25 * 365.25) // ~0.0002959
+
+      // Create the bodies:
+      // Sun: placed at the origin.
+      const sun = new Body(0, 0, 0, 0, 1, 20, 'yellow')
+
+      // Mercury: placed 0.387 AU from Sun with circular orbital speed ~0.02765 AU/day.
+      // Mass is about 1.66e-7 solar masses, drawn smaller.
+      const mercury = new Body(0.387, 0, 0, 0.02765, 1.66e-7, 4, 'orange')
+
+      // Earth: placed 1 AU away with a circular orbital speed ~0.017202 AU/day.
+      // (Earth mass ~ 3e-6 solar masses, for simulation simplicity.)
+      const earth = new Body(1, 0, 0, 0.017202, 3e-6, 8, 'blue')
+
+      // Moon: orbiting Earth at ~0.00257 AU.
+      // For a circular orbit, the Moon’s relative speed is ~0.00059 AU/day.
+      // Here, we set the Moon directly above Earth (along the y-axis) and give it a small horizontal velocity.
+      const moon = new Body(1, 0.00257, -0.00059, 0.017202, 3.7e-8, 4, 'gray')
+
+      // Collect all bodies into one array.
+      const bodies = [sun, mercury, earth, moon]
+
+      // Compute the gravitational force between two bodies using simulation units.
+      function computeForce(a, b) {
+        const dx = b.pos.x - a.pos.x
+        const dy = b.pos.y - a.pos.y
+        const distSq = dx * dx + dy * dy
+        const dist = Math.sqrt(distSq)
+        const softening = 0.001 // softening length in AU to avoid singularities
+        const forceMagnitude =
+          (G * a.mass * b.mass) / (distSq + softening * softening)
+        return {
+          x: (dx / dist) * forceMagnitude,
+          y: (dy / dist) * forceMagnitude,
+        }
+      }
+
+      // Compute net accelerations for all bodies.
+      function computeAccelerations() {
+        for (let body of bodies) {
+          let ax = 0,
+            ay = 0
+          for (let other of bodies) {
+            if (body === other) continue
+            const force = computeForce(body, other)
+            ax += force.x / body.mass
+            ay += force.y / body.mass
+          }
+          body.acc = new Vector(ax, ay)
+        }
+      }
+
+      const baseDt = 1 // base time step in days
+
+      // Update the simulation using Velocity Verlet integration.
+      function update() {
+        const dt = baseDt * timeScale // effective time step
+        // Update positions.
+        for (let body of bodies) {
+          body.pos.x += body.vel.x * dt + 0.5 * body.acc.x * dt * dt
+          body.pos.y += body.vel.y * dt + 0.5 * body.acc.y * dt * dt
+        }
+        // Store the old accelerations.
+        const oldAccs = bodies.map(body => new Vector(body.acc.x, body.acc.y))
+        // Recompute accelerations at new positions.
+        computeAccelerations()
+        // Update velocities using the average of old and new accelerations.
+        for (let i = 0; i < bodies.length; i++) {
+          bodies[i].vel.x += 0.5 * (oldAccs[i].x + bodies[i].acc.x) * dt
+          bodies[i].vel.y += 0.5 * (oldAccs[i].y + bodies[i].acc.y) * dt
+        }
+      }
+
+      function render() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        // Draw Sun, Mercury, and Earth normally.
+        sun.draw()
+        mercury.draw()
+        earth.draw()
+        // For the Moon, scale its offset relative to Earth for better visibility.
+        const earthScreenX = canvas.width / 2 + earth.pos.x * AU_SCALE
+        const earthScreenY = canvas.height / 2 + earth.pos.y * AU_SCALE
+        const offsetX = (moon.pos.x - earth.pos.x) * AU_SCALE * MOON_DRAW_SCALE
+        const offsetY = (moon.pos.y - earth.pos.y) * AU_SCALE * MOON_DRAW_SCALE
+        const moonScreenX = earthScreenX + offsetX
+        const moonScreenY = earthScreenY + offsetY
+        ctx.beginPath()
+        ctx.arc(moonScreenX, moonScreenY, moon.radius, 0, Math.PI * 2)
+        ctx.fillStyle = moon.color
+        ctx.fill()
+      }
+
+      function loop() {
+        update()
+        render()
+        requestAnimationFrame(loop)
+      }
+
+      // Initialize accelerations and start the animation loop.
+      computeAccelerations()
+      loop()
+
+      // Optional: Click the canvas to cycle through time scales.
+      canvas.addEventListener('click', () => {
+        if (timeScale === 0.1) timeScale = 0.5
+        else if (timeScale === 0.5) timeScale = 1
+        else if (timeScale === 1) timeScale = 0.05
+        else timeScale = 0.1
+        console.log('Time scale:', timeScale)
+      })
+    </script>
+  </body>
+</html>
