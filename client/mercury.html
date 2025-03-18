@@ -107,18 +107,22 @@
         }
       }
 
-      // Draw function for zoomed-in view (for moons or other bodies)
-      const MOON_DRAW_SCALE = 100 // Adjust the zoom level for the moon's position
-      function drawZoomed() {
-        const earthScreenX = canvas.width / 2 + earth.pos.x * AU_SCALE
-        const earthScreenY = canvas.height / 2 + earth.pos.y * AU_SCALE
-        const offsetX = (moon.pos.x - earth.pos.x) * AU_SCALE * MOON_DRAW_SCALE
-        const offsetY = (moon.pos.y - earth.pos.y) * AU_SCALE * MOON_DRAW_SCALE
-        const moonScreenX = earthScreenX + offsetX
-        const moonScreenY = earthScreenY + offsetY
+      // Draw function for zoomed-in view (for selected bodies)
+      const ZOOM_DRAW_SCALE = 100 // Adjust the zoom level for selected body pair's positions
+
+      function drawZoomed(body1, body2) {
+        const body1ScreenX = canvas.width / 2 + body1.pos.x * AU_SCALE
+        const body1ScreenY = canvas.height / 2 + body1.pos.y * AU_SCALE
+
+        const offsetX = (body2.pos.x - body1.pos.x) * AU_SCALE * ZOOM_DRAW_SCALE
+        const offsetY = (body2.pos.y - body1.pos.y) * AU_SCALE * ZOOM_DRAW_SCALE
+        const body2ScreenX = body1ScreenX + offsetX
+        const body2ScreenY = body1ScreenY + offsetY
+
+        // Draw body2 relative to body1
         ctx.beginPath()
-        ctx.arc(moonScreenX, moonScreenY, moon.radius, 0, Math.PI * 2)
-        ctx.fillStyle = moon.color
+        ctx.arc(body2ScreenX, body2ScreenY, body2.radius, 0, Math.PI * 2)
+        ctx.fillStyle = body2.color
         ctx.fill()
       }
 
@@ -131,9 +135,7 @@
           new Body(0, 0, 0, 0, 1, 20, 'yellow'), // Sun
           new Body(0.387, 0, 0, 0.02765, 1.66e-7, 4, 'orange'), // Mercury
           new Body(1, 0, 0, 0.017202, 3e-6, 8, 'blue'), // Earth
-          // Moon's new position: 0.3 AU from Earth, calculate the orbital velocity
           new Body(1, 0.00257, -0.00059, 0.017202, 3.7e-8, 4, 'gray'), // Moon
-          // Moon at 0.3 AU
         ]
       }
 
@@ -191,12 +193,14 @@
 
       function render() {
         ctx.clearRect(0, 0, canvas.width, canvas.height)
-        //bodies.forEach(body => body.draw())
+        // Render all bodies except the zoomed-in bodies
         for (let body of bodies) {
           if ([moon].includes(body)) continue
           body.draw()
         }
-        drawZoomed()
+
+        // If you want to zoom in on a specific pair of bodies, pass them here.
+        drawZoomed(earth, moon) // For example, zooming into Earth and Moon
       }
 
       function loop() {
