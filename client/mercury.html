@@ -27,10 +27,10 @@
       canvas.height = window.innerHeight
 
       // Conversion: simulation uses AU (astronomical units) and days.
-      // We'll convert AU to canvas pixels; here, 1 AU equals 150 pixels.
       const AU_SCALE = 150
       // Time scale factor: set to a value less than 1 to slow down time.
-      let timeScale = 0.5 // 0.1 means simulation runs at 10% of the base speed
+      let timeScale = 0.5 // 0.5 means normal speed, 0 means paused
+      let simulationRunning = false // Controls whether the simulation is updating
 
       // Define a simple 2D vector type.
       class Vector {
@@ -64,27 +64,18 @@
       // Gravitational constant in AU³/day² per solar mass.
       const G = (4 * Math.PI * Math.PI) / (365.25 * 365.25) // ~0.0002959
 
-      // Create the bodies:
-      // Sun: placed at the origin.
-      const sun = new Body(0, 0, 0, 0, 1, 20, 'yellow')
+      // Initial body creation
+      function createBodies() {
+        return [
+          new Body(0, 0, 0, 0, 1, 20, 'yellow'), // Sun
+          new Body(0.387, 0, 0, 0.02765, 1.66e-7, 4, 'orange'), // Mercury
+          new Body(1, 0, 0, 0.017202, 3e-6, 8, 'blue'), // Earth
+          new Body(1, 0.00257, -0.00059, 0.017202, 3.7e-8, 4, 'gray'), // Moon
+        ]
+      }
 
-      // Mercury: placed 0.387 AU from Sun with circular orbital speed ~0.02765 AU/day.
-      // Mass is about 1.66e-7 solar masses, drawn smaller.
-      const mercury = new Body(0.387, 0, 0, 0.02765, 1.66e-7, 4, 'orange')
+      const bodies = createBodies() // Create bodies initially
 
-      // Earth: placed 1 AU away with a circular orbital speed ~0.017202 AU/day.
-      // (Earth mass ~ 3e-6 solar masses, for simulation simplicity.)
-      const earth = new Body(1, 0, 0, 0.017202, 3e-6, 8, 'blue')
-
-      // Moon: orbiting Earth at ~0.00257 AU.
-      // For a circular orbit, the Moon’s relative speed is ~0.00059 AU/day.
-      // Here, we set the Moon directly above Earth (along the y-axis) and give it a small horizontal velocity.
-      const moon = new Body(1, 0.00257, -0.00059, 0.017202, 3.7e-8, 4, 'gray')
-
-      // Collect all bodies into one array.
-      const bodies = [sun, mercury, earth, moon]
-
-      // Compute the gravitational force between two bodies using simulation units.
       function computeForce(a, b) {
         const dx = b.pos.x - a.pos.x
         const dy = b.pos.y - a.pos.y
@@ -99,7 +90,6 @@
         }
       }
 
-      // Compute net accelerations for all bodies.
       function computeAccelerations() {
         for (let body of bodies) {
           let ax = 0,
@@ -116,19 +106,14 @@
 
       const baseDt = 1 // base time step in days
 
-      // Update the simulation using Velocity Verlet integration.
       function update() {
         const dt = baseDt * timeScale // effective time step
-        // Update positions.
         for (let body of bodies) {
           body.pos.x += body.vel.x * dt + 0.5 * body.acc.x * dt * dt
           body.pos.y += body.vel.y * dt + 0.5 * body.acc.y * dt * dt
         }
-        // Store the old accelerations.
         const oldAccs = bodies.map(body => new Vector(body.acc.x, body.acc.y))
-        // Recompute accelerations at new positions.
         computeAccelerations()
-        // Update velocities using the average of old and new accelerations.
         for (let i = 0; i < bodies.length; i++) {
           bodies[i].vel.x += 0.5 * (oldAccs[i].x + bodies[i].acc.x) * dt
           bodies[i].vel.y += 0.5 * (oldAccs[i].y + bodies[i].acc.y) * dt
@@ -137,23 +122,39 @@
 
       function render() {
         ctx.clearRect(0, 0, canvas.width, canvas.height)
-        // Draw Sun, Mercury, and Earth normally.
-        sun.draw()
-        mercury.draw()
-        earth.draw()
-        moon.draw()
+        bodies.forEach(body => body.draw())
       }
 
       function loop() {
-        update()
+        if (simulationRunning) {
+          update()
+        }
         render()
         requestAnimationFrame(loop)
       }
 
-      // Initialize accelerations and start the animation loop.
+      // Add event listener to toggle time scale with 'S' key.
+      window.addEventListener('keydown', event => {
+        if (event.key === 's' || event.key === 'S') {
+          // Toggle simulation state (pause or resume)
+          simulationRunning = !simulationRunning
+        } else if (event.key === 'r' || event.key === 'R') {
+          // Restart the simulation
+          restartSimulation()
+        }
+      })
+
+      function restartSimulation() {
+        // Reset all bodies to their initial positions, velocities, and accelerations.
+        bodies.length = 0 // Clear the bodies array
+        bodies.push(...createBodies()) // Reinitialize bodies
+        timeScale = 0.5 // Reset time scale to normal speed
+        simulationRunning = false // Ensure simulation is running after restart
+        computeAccelerations() // Recompute accelerations for the initial state
+      }
+
       computeAccelerations()
       loop()
-
     </script>
   </body>
 </html>
