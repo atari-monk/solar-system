@@ -226,9 +226,7 @@
         bodies.length = 0 // Clear the bodies array
         bodies.push(...createBodies()) // Reinitialize bodies
         timeScale = 0.5 // Reset time scale to normal speed
-        //computeAccelerations() // Recompute accelerations for the initial state
-        //update()
-        //render()
+        computeAccelerations() // Recompute accelerations for the initial state
       }
 
       computeAccelerations()
