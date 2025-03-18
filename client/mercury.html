@@ -76,6 +76,22 @@
           this.drawVelocity(x, y)
         }
 
+        drawZoomed(target, zoomScale = 100) {
+          const screenX = canvas.width / 2 + this.pos.x * AU_SCALE
+          const screenY = canvas.height / 2 + this.pos.y * AU_SCALE
+
+          const offsetX = (target.pos.x - this.pos.x) * AU_SCALE * zoomScale
+          const offsetY = (target.pos.y - this.pos.y) * AU_SCALE * zoomScale
+          const targetScreenX = screenX + offsetX
+          const targetScreenY = screenY + offsetY
+
+          // Draw target relative to this body
+          ctx.beginPath()
+          ctx.arc(targetScreenX, targetScreenY, target.radius, 0, Math.PI * 2)
+          ctx.fillStyle = target.color
+          ctx.fill()
+        }
+
         // Encapsulated method to draw velocity vector
         drawVelocity(x, y) {
           const velocityMagnitude = this.vel.magnitude()
@@ -105,22 +121,6 @@
           const b = 0 // Blue stays constant
           return `rgb(${r}, ${g}, ${b})`
         }
-      }
-
-      function drawZoomed(body1, body2, ZOOM_DRAW_SCALE = 100) {
-        const body1ScreenX = canvas.width / 2 + body1.pos.x * AU_SCALE
-        const body1ScreenY = canvas.height / 2 + body1.pos.y * AU_SCALE
-
-        const offsetX = (body2.pos.x - body1.pos.x) * AU_SCALE * ZOOM_DRAW_SCALE
-        const offsetY = (body2.pos.y - body1.pos.y) * AU_SCALE * ZOOM_DRAW_SCALE
-        const body2ScreenX = body1ScreenX + offsetX
-        const body2ScreenY = body1ScreenY + offsetY
-
-        // Draw body2 relative to body1
-        ctx.beginPath()
-        ctx.arc(body2ScreenX, body2ScreenY, body2.radius, 0, Math.PI * 2)
-        ctx.fillStyle = body2.color
-        ctx.fill()
       }
 
       // Gravitational constant in AU³/day² per solar mass.
@@ -195,7 +195,7 @@
         }
 
         // If you want to zoom in on a specific pair of bodies, pass them here.
-        drawZoomed(earth, moon) // For example, zooming into Earth and Moon
+        earth.drawZoomed(moon) // For example, zooming into Earth and Moon
       }
 
       function loop() {
