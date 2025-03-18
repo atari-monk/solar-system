@@ -128,24 +128,24 @@
 
       // Gravitational constant in AU³/day² per solar mass.
       const G = (4 * Math.PI * Math.PI) / (365.25 * 365.25) // ~0.0002959
-
+      let sun, mercury, earth, moon
       // Initial body creation
       function createBodies() {
-        return [
+        const bodies = [
           new Body(0, 0, 0, 0, 1, 20, 'yellow'), // Sun
           new Body(0.387, 0, 0, 0.02765, 1.66e-7, 4, 'orange'), // Mercury
           new Body(1, 0, 0, 0.017202, 3e-6, 8, 'blue'), // Earth
           new Body(1, 0.00257, -0.00059, 0.017202, 3.7e-8, 4, 'gray'), // Moon
         ]
+        sun = bodies[0]
+        mercury = bodies[1]
+        earth = bodies[2]
+        moon = bodies[3]
+        return bodies
       }
-
-      const bodies = createBodies() // Create bodies initially
-
-      // Identify Earth and Moon objects
-      const sun = bodies[0]
-      const mercury = bodies[1]
-      const earth = bodies[2]
-      const moon = bodies[3]
+      let bodies = []
+      const baseDt = 1 // base time step in days
+      restartSimulation()
 
       function computeForce(a, b) {
         const dx = b.pos.x - a.pos.x
@@ -174,8 +174,6 @@
           body.acc = new Vector(ax, ay)
         }
       }
-
-      const baseDt = 1 // base time step in days
 
       function update() {
         const dt = baseDt * timeScale // effective time step
@@ -223,12 +221,14 @@
       })
 
       function restartSimulation() {
+        simulationRunning = false // Ensure simulation is running after restart
         // Reset all bodies to their initial positions, velocities, and accelerations.
         bodies.length = 0 // Clear the bodies array
         bodies.push(...createBodies()) // Reinitialize bodies
         timeScale = 0.5 // Reset time scale to normal speed
-        simulationRunning = false // Ensure simulation is running after restart
-        computeAccelerations() // Recompute accelerations for the initial state
+        //computeAccelerations() // Recompute accelerations for the initial state
+        //update()
+        //render()
       }
 
       computeAccelerations()
