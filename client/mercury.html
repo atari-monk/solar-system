@@ -107,10 +107,7 @@
         }
       }
 
-      // Draw function for zoomed-in view (for selected bodies)
-      const ZOOM_DRAW_SCALE = 100 // Adjust the zoom level for selected body pair's positions
-
-      function drawZoomed(body1, body2) {
+      function drawZoomed(body1, body2, ZOOM_DRAW_SCALE = 100) {
         const body1ScreenX = canvas.width / 2 + body1.pos.x * AU_SCALE
         const body1ScreenY = canvas.height / 2 + body1.pos.y * AU_SCALE
 
