@@ -29,8 +29,6 @@
       // Conversion: simulation uses AU (astronomical units) and days.
       // We'll convert AU to canvas pixels; here, 1 AU equals 150 pixels.
       const AU_SCALE = 150
-      // Factor to scale the Moon's drawn orbit relative to Earth.
-      const MOON_DRAW_SCALE = 50
       // Time scale factor: set to a value less than 1 to slow down time.
       let timeScale = 0.2 // 0.1 means simulation runs at 10% of the base speed
 
@@ -143,17 +141,7 @@
         sun.draw()
         mercury.draw()
         earth.draw()
-        // For the Moon, scale its offset relative to Earth for better visibility.
-        const earthScreenX = canvas.width / 2 + earth.pos.x * AU_SCALE
-        const earthScreenY = canvas.height / 2 + earth.pos.y * AU_SCALE
-        const offsetX = (moon.pos.x - earth.pos.x) * AU_SCALE * MOON_DRAW_SCALE
-        const offsetY = (moon.pos.y - earth.pos.y) * AU_SCALE * MOON_DRAW_SCALE
-        const moonScreenX = earthScreenX + offsetX
-        const moonScreenY = earthScreenY + offsetY
-        ctx.beginPath()
-        ctx.arc(moonScreenX, moonScreenY, moon.radius, 0, Math.PI * 2)
-        ctx.fillStyle = moon.color
-        ctx.fill()
+        moon.draw()
       }
 
       function loop() {
