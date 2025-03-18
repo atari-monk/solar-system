@@ -30,7 +30,7 @@
       // We'll convert AU to canvas pixels; here, 1 AU equals 150 pixels.
       const AU_SCALE = 150
       // Time scale factor: set to a value less than 1 to slow down time.
-      let timeScale = 0.2 // 0.1 means simulation runs at 10% of the base speed
+      let timeScale = 0.5 // 0.1 means simulation runs at 10% of the base speed
 
       // Define a simple 2D vector type.
       class Vector {
@@ -154,14 +154,6 @@
       computeAccelerations()
       loop()
 
-      // Optional: Click the canvas to cycle through time scales.
-      canvas.addEventListener('click', () => {
-        if (timeScale === 0.1) timeScale = 0.5
-        else if (timeScale === 0.5) timeScale = 1
-        else if (timeScale === 1) timeScale = 0.05
-        else timeScale = 0.1
-        console.log('Time scale:', timeScale)
-      })
     </script>
   </body>
 </html>
