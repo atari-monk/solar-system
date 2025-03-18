@@ -38,6 +38,20 @@
           this.x = x
           this.y = y
         }
+
+        // Method to calculate the magnitude of the vector
+        magnitude() {
+          return Math.sqrt(this.x * this.x + this.y * this.y)
+        }
+
+        // Method to normalize the vector
+        normalize() {
+          const mag = this.magnitude()
+          if (mag > 0) {
+            return new Vector(this.x / mag, this.y / mag)
+          }
+          return new Vector(0, 0)
+        }
       }
 
       // Body class: positions in AU, velocities in AU/day, accelerations in AU/day².
@@ -50,6 +64,7 @@
           this.radius = radius // drawn radius in pixels
           this.color = color
         }
+
         // For bodies other than the Moon, convert simulation coordinates (in AU) to canvas coordinates.
         draw() {
           const x = canvas.width / 2 + this.pos.x * AU_SCALE
@@ -58,6 +73,35 @@
           ctx.arc(x, y, this.radius, 0, Math.PI * 2)
           ctx.fillStyle = this.color
           ctx.fill()
+
+          // Draw velocity vector as a colored line
+          const velocityMagnitude = this.vel.magnitude()
+          const maxVelocity = 0.1 // You can adjust this to scale velocity magnitude
+          const velocityColor = this.getVelocityColor(
+            velocityMagnitude,
+            maxVelocity
+          )
+
+          const velLength = velocityMagnitude * AU_SCALE * 500 // Scale velocity length to fit screen
+          const velEndX = x + this.vel.x * velLength
+          const velEndY = y + this.vel.y * velLength
+
+          ctx.beginPath()
+          ctx.moveTo(x, y)
+          ctx.lineTo(velEndX, velEndY)
+          ctx.strokeStyle = velocityColor
+          ctx.lineWidth = 2
+          ctx.stroke()
+        }
+
+        // Method to get velocity color based on magnitude
+        getVelocityColor(velocityMagnitude, maxVelocity) {
+          // Use a color gradient based on velocity magnitude.
+          const ratio = Math.min(velocityMagnitude / maxVelocity, 1)
+          const r = Math.floor(255 * (1 - ratio)) // Red decreases as velocity increases
+          const g = Math.floor(255 * ratio) // Green increases as velocity increases
+          const b = 0 // Blue stays constant
+          return `rgb(${r}, ${g}, ${b})`
         }
       }
 
